@@ -1,0 +1,108 @@
+openapi: 3.0.0
+info:
+  title: OCR API
+  description: Image OCR using manga-ocr-base model
+  version: 1.0.0
+servers:
+  - url: http://localhost:8000
+    description: Local development server
+paths:
+  /ocr-with-probabilities:
+    post:
+      summary: Extract text with probabilities
+      description: Extract text from an image with confidence scores and multiple predictions
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Image file to process
+                num_predictions:
+                  type: integer
+                  default: 3
+                  description: Number of top predictions to return
+      responses:
+        '200':
+          description: Successful OCR extraction
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OCRProbabilityResult'
+        '400':
+          description: Bad request - file must be an image
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPError'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPError'
+  /health:
+    get:
+      summary: Health check
+      description: Check if the service is running
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: healthy
+components:
+  schemas:
+    TextPrediction:
+      type: object
+      required:
+        - text
+        - confidence
+      properties:
+        text:
+          type: string
+          description: Predicted text
+        confidence:
+          type: number
+          format: float
+          description: Confidence score (0-1)
+    OCRProbabilityResult:
+      type: object
+      required:
+        - tokens
+        - probabilities
+        - top_predictions
+      properties:
+        tokens:
+          type: array
+          items:
+            type: string
+          description: Individual tokens detected
+        probabilities:
+          type: array
+          items:
+            type: number
+            format: float
+          description: Confidence score for each token
+        top_predictions:
+          type: array
+          items:
+            $ref: '#/components/schemas/TextPrediction'
+          description: Top N predictions with confidence scores
+    HTTPError:
+      type: object
+      properties:
+        detail:
+          type: string
+          description: Error message
